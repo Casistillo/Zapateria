@@ -1,0 +1,242 @@
+﻿@page "/ventas"
+@rendermode InteractiveServer
+
+@using Microsoft.EntityFrameworkCore
+@using Zapateria.Data
+@using Zapateria.Models
+@using Zapateria.Services
+
+@inject ZapateriaDbContext Db
+@inject ProductoService ProductoServicio
+
+<h1 class="page-title">Registro de ventas</h1>
+<p class="page-subtitle">Registra operaciones de venta con clientes y productos del catálogo.</p>
+<div class="title-divider"></div>
+
+@if (clientes == null || productos == null)
+{
+    <div class="card">
+        <div class="card-body">
+            <p>Cargando datos...</p>
+        </div>
+    </div>
+}
+else if (!clientes.Any())
+{
+    <div class="alert alert-warning">
+        Primero debes registrar clientes antes de crear una venta.
+    </div>
+}
+else if (!productos.Any())
+{
+    <div class="alert alert-warning">
+        No se pudieron cargar productos desde la API.
+    </div>
+}
+else
+{
+    <div class="card mb-4">
+        <div class="card-body">
+
+            <h3>Nueva venta</h3>
+
+            <div class="row">
+
+                <div class="col-md-4 mb-3">
+                    <label>Cliente</label>
+                    <select class="form-select" @bind="clienteIdSeleccionado">
+                        @foreach (var c in clientes)
+                        {
+                            <option value="@c.Id">@c.Nombre</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-5 mb-3">
+                    <label>Producto</label>
+                    <select class="form-select" @bind="productoApiIdSeleccionado">
+                        @foreach (var p in productos)
+                        {
+                            <option value="@p.Id">@p.Nombre - $@p.Precio</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <label>Cantidad</label>
+                    <InputNumber class="form-control" @bind-Value="cantidad" />
+                </div>
+
+            </div>
+
+            <button class="btn btn-primary" @onclick="RegistrarVenta">
+                Registrar venta
+            </button>
+
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(mensaje))
+{
+    <div class="alert alert-info">
+        @mensaje
+    </div>
+}
+
+<h3 class="section-title">Historial de ventas</h3>
+
+@if (ventas == null)
+{
+    <div class="card">
+        <div class="card-body">
+            <p>Cargando historial...</p>
+        </div>
+    </div>
+}
+else if (!ventas.Any())
+{
+    <div class="alert alert-warning">
+        No hay ventas registradas.
+    </div>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Cliente</th>
+                <th>Total</th>
+                <th>Estado</th>
+                <th>Detalle</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var v in ventas)
+            {
+                <tr>
+                    <td>@v.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                    <td>@v.Cliente?.Nombre</td>
+                    <td>$@v.Total</td>
+                    <td>@v.Estado</td>
+                    <td>
+                        @foreach (var d in v.Detalles)
+                        {
+                            var producto = productos?.FirstOrDefault(p => p.Id == d.ProductoApiId);
+
+                            <div>
+                                <strong>@(producto?.Nombre ?? $"Producto API ID {d.ProductoApiId}")</strong>
+                                <br />
+                                Cantidad: @d.Cantidad |
+                                Precio: $@d.Precio
+                            </div>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Cliente>? clientes;
+    private List<ProductoApi>? productos;
+    private List<Venta>? ventas;
+
+    private int clienteIdSeleccionado;
+    private int productoApiIdSeleccionado;
+    private int cantidad = 1;
+
+    private string mensaje = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        clientes = await Db.Clientes
+            .OrderBy(c => c.Nombre)
+            .ToListAsync();
+
+        productos = await ProductoServicio.ObtenerProductos();
+
+        ventas = await Db.Ventas
+            .Include(v => v.Cliente)
+            .Include(v => v.Detalles)
+            .OrderByDescending(v => v.Fecha)
+            .ToListAsync();
+
+        if (clientes.Any())
+        {
+            clienteIdSeleccionado = clientes.First().Id;
+        }
+
+        if (productos.Any())
+        {
+            productoApiIdSeleccionado = productos.First().Id;
+        }
+    }
+
+    private async Task RegistrarVenta()
+    {
+        mensaje = string.Empty;
+
+        if (clienteIdSeleccionado == 0)
+        {
+            mensaje = "Debes seleccionar un cliente.";
+            return;
+        }
+
+        if (productoApiIdSeleccionado == 0)
+        {
+            mensaje = "Debes seleccionar un producto.";
+            return;
+        }
+
+        if (cantidad <= 0)
+        {
+            mensaje = "La cantidad debe ser mayor a cero.";
+            return;
+        }
+
+        var producto = productos?.FirstOrDefault(p => p.Id == productoApiIdSeleccionado);
+
+        if (producto == null)
+        {
+            mensaje = "No se encontró el producto seleccionado.";
+            return;
+        }
+
+        var total = producto.Precio * cantidad;
+
+        var venta = new Venta
+        {
+            ClienteId = clienteIdSeleccionado,
+            Fecha = DateTime.Now,
+            Total = total,
+            Estado = "Registrada",
+            Detalles = new List<DetalleVenta>
+            {
+                new DetalleVenta
+                {
+                    ProductoApiId = producto.Id,
+                    Cantidad = cantidad,
+                    Precio = producto.Precio
+                }
+            }
+        };
+
+        Db.Ventas.Add(venta);
+        await Db.SaveChangesAsync();
+
+        mensaje = "Venta registrada correctamente.";
+
+        cantidad = 1;
+
+        await CargarDatos();
+    }
+}

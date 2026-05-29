@@ -1,0 +1,204 @@
+﻿@page "/clientes"
+@rendermode InteractiveServer
+
+@using Microsoft.EntityFrameworkCore
+@using Zapateria.Data
+@using Zapateria.Models
+
+@inject ZapateriaDbContext Db
+
+<h1 class="page-title">Gestión de clientes</h1>
+<p class="page-subtitle">Administra la cartera de clientes de Paso Firme.</p>
+<div class="title-divider"></div>
+
+<div class="card mb-4">
+    <div class="card-body">
+
+        <h3>@(editando ? "Editar cliente" : "Nuevo cliente")</h3>
+
+        <EditForm Model="clienteActual" OnValidSubmit="GuardarCliente">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="row">
+
+                <div class="col-md-4 mb-3">
+                    <label>Nombre</label>
+                    <InputText class="form-control" @bind-Value="clienteActual.Nombre" />
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label>Teléfono</label>
+                    <InputText class="form-control" @bind-Value="clienteActual.Telefono" />
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label>Email</label>
+                    <InputText class="form-control" @bind-Value="clienteActual.Email" />
+                </div>
+
+            </div>
+
+            <button class="btn btn-primary" type="submit">
+                @(editando ? "Actualizar cliente" : "Guardar cliente")
+            </button>
+
+            @if (editando)
+            {
+                <button class="btn btn-secondary ms-2" type="button" @onclick="CancelarEdicion">
+                    Cancelar
+                </button>
+            }
+        </EditForm>
+
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(mensaje))
+{
+    <div class="alert alert-info">
+        @mensaje
+    </div>
+}
+
+<h3 class="section-title">Clientes registrados</h3>
+
+@if (clientes == null)
+{
+    <div class="card">
+        <div class="card-body">
+            <p>Cargando clientes...</p>
+        </div>
+    </div>
+}
+else if (!clientes.Any())
+{
+    <div class="alert alert-warning">
+        No hay clientes registrados.
+    </div>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Teléfono</th>
+                <th>Email</th>
+                <th>Fecha registro</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var c in clientes)
+            {
+                <tr>
+                    <td>@c.Nombre</td>
+                    <td>@c.Telefono</td>
+                    <td>@c.Email</td>
+                    <td>@c.FechaRegistro.ToString("dd/MM/yyyy")</td>
+                    <td>
+                        <button class="btn btn-warning btn-sm" @onclick="() => EditarCliente(c)">
+                            Editar
+                        </button>
+
+                        <button class="btn btn-danger btn-sm ms-2" @onclick="() => EliminarCliente(c.Id)">
+                            Eliminar
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Cliente>? clientes;
+
+    private Cliente clienteActual = new();
+
+    private bool editando = false;
+
+    private string mensaje = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarClientes();
+    }
+
+    private async Task CargarClientes()
+    {
+        clientes = await Db.Clientes
+            .OrderByDescending(c => c.FechaRegistro)
+            .ToListAsync();
+    }
+
+    private async Task GuardarCliente()
+    {
+        if (editando)
+        {
+            var clienteDb = await Db.Clientes.FindAsync(clienteActual.Id);
+
+            if (clienteDb != null)
+            {
+                clienteDb.Nombre = clienteActual.Nombre;
+                clienteDb.Telefono = clienteActual.Telefono;
+                clienteDb.Email = clienteActual.Email;
+
+                mensaje = "Cliente actualizado correctamente.";
+            }
+        }
+        else
+        {
+            clienteActual.FechaRegistro = DateTime.Now;
+
+            Db.Clientes.Add(clienteActual);
+
+            mensaje = "Cliente registrado correctamente.";
+        }
+
+        await Db.SaveChangesAsync();
+
+        clienteActual = new Cliente();
+        editando = false;
+
+        await CargarClientes();
+    }
+
+    private void EditarCliente(Cliente cliente)
+    {
+        clienteActual = new Cliente
+        {
+            Id = cliente.Id,
+            Nombre = cliente.Nombre,
+            Telefono = cliente.Telefono,
+            Email = cliente.Email,
+            FechaRegistro = cliente.FechaRegistro
+        };
+
+        editando = true;
+        mensaje = string.Empty;
+    }
+
+    private async Task EliminarCliente(int id)
+    {
+        var cliente = await Db.Clientes.FindAsync(id);
+
+        if (cliente != null)
+        {
+            Db.Clientes.Remove(cliente);
+            await Db.SaveChangesAsync();
+
+            mensaje = "Cliente eliminado correctamente.";
+            await CargarClientes();
+        }
+    }
+
+    private void CancelarEdicion()
+    {
+        clienteActual = new Cliente();
+        editando = false;
+        mensaje = string.Empty;
+    }
+}

@@ -1,0 +1,109 @@
+﻿@page "/catalogo"
+@rendermode InteractiveServer
+
+@using Zapateria.Models
+@using Zapateria.Services
+
+@inject ProductoService Servicio
+
+<h1 class="page-title">Catálogo de calzado</h1>
+<p class="page-subtitle">Productos disponibles para venta en Paso Firme.</p>
+<div class="title-divider"></div>
+
+@if (categorias == null)
+{
+    <div class="card">
+        <div class="card-body">
+            <p>Cargando categorías...</p>
+        </div>
+    </div>
+}
+else if (categorias.Any())
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <label class="form-label">Filtrar por categoría</label>
+
+            <select class="form-select" @bind="categoriaSeleccionada">
+                @foreach (var c in categorias)
+                {
+                    <option value="@c.Id">@c.Nombre</option>
+                }
+            </select>
+        </div>
+    </div>
+}
+
+@if (productos == null)
+{
+    <div class="card">
+        <div class="card-body">
+            <p>Cargando productos...</p>
+        </div>
+    </div>
+}
+else if (!productos.Any())
+{
+    <div class="alert alert-warning">
+        No se pudo cargar el catálogo desde la API.
+    </div>
+}
+else
+{
+    var productosFiltrados = productos
+        .Where(p => p.CategoriaId == categoriaSeleccionada)
+        .ToList();
+
+    if (!productosFiltrados.Any())
+    {
+        <div class="alert alert-info">
+            No hay productos para esta categoría.
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var p in productosFiltrados)
+            {
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card card-producto h-100">
+                        <div class="card-body">
+                            <h3>@p.Nombre</h3>
+
+                            <p>@p.Descripcion</p>
+
+                            <p>
+                                <strong>Precio:</strong> $@p.Precio
+                            </p>
+
+                            <p>
+                                <strong>Stock:</strong> @p.Stock
+                            </p>
+
+                            <p>
+                                <strong>Proveedor:</strong> @p.Proveedor
+                            </p>
+
+                            <span class="business-highlight">
+                                @p.Categoria
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+}
+
+@code {
+    private List<ProductoApi>? productos;
+    private List<CategoriaApi>? categorias;
+
+    private int categoriaSeleccionada = 3;
+
+    protected override async Task OnInitializedAsync()
+    {
+        categorias = await Servicio.ObtenerCategorias();
+        productos = await Servicio.ObtenerProductos();
+    }
+}

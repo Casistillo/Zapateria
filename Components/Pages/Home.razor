@@ -1,0 +1,158 @@
+﻿@page "/"
+@rendermode InteractiveServer
+
+@using Microsoft.EntityFrameworkCore
+@using Zapateria.Data
+@using Zapateria.Services
+
+@inject ZapateriaDbContext Db
+@inject ProductoService ProductoServicio
+
+<section class="hero-store">
+    <p class="hero-kicker">Zapatería profesional</p>
+
+    <h1>Paso Firme</h1>
+
+    <p>
+        Calzado moderno, cómodo y confiable para cada momento del día.
+        Gestiona clientes, consulta productos y registra ventas desde un sistema
+        web diseñado para una zapatería actual.
+    </p>
+
+    <div class="hero-actions">
+        <a class="btn btn-primary" href="ventas">Registrar venta</a>
+        <a class="btn btn-outline-store" href="catalogo">Explorar catálogo</a>
+    </div>
+</section>
+
+<div class="dashboard-header">
+    <div>
+        <h2>Panel principal</h2>
+        <p>Resumen operativo de la zapatería</p>
+    </div>
+
+    <div class="dashboard-date">
+        @DateTime.Now.ToString("dddd, dd MMMM yyyy")
+    </div>
+</div>
+
+@if (cargando)
+{
+    <div class="card">
+        <div class="card-body">
+            <p>Cargando información del negocio...</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="dashboard-grid">
+
+        <div class="stat-card">
+            <div class="stat-tag">CLIENTES</div>
+            <div class="stat-number">@totalClientes</div>
+            <div class="stat-label">Clientes registrados</div>
+            <div class="stat-source">Base de datos propia</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-tag">VENTAS</div>
+            <div class="stat-number">@totalVentas</div>
+            <div class="stat-label">Ventas realizadas</div>
+            <div class="stat-source">Operaciones registradas</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-tag">CATÁLOGO</div>
+            <div class="stat-number">@totalProductos</div>
+            <div class="stat-label">Productos disponibles</div>
+            <div class="stat-source">Catálogo externo</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-tag">INGRESOS</div>
+            <div class="stat-number">$@ingresosTotales.ToString("0.00")</div>
+            <div class="stat-label">Ingresos acumulados</div>
+            <div class="stat-source">Ventas en sistema</div>
+        </div>
+
+    </div>
+
+    <section class="home-section">
+        <h2>Accesos rápidos</h2>
+        <p>Administra las áreas principales de la zapatería.</p>
+
+        <div class="quick-grid">
+
+            <a class="quick-card" href="catalogo">
+                <div class="quick-icon">👟</div>
+                <h4>Catálogo de calzado</h4>
+                <p>Consulta tenis, botas, sandalias y zapatos disponibles.</p>
+            </a>
+
+            <a class="quick-card" href="clientes">
+                <div class="quick-icon">👤</div>
+                <h4>Clientes</h4>
+                <p>Registra, edita y consulta la cartera de clientes.</p>
+            </a>
+
+            <a class="quick-card" href="ventas">
+                <div class="quick-icon">🧾</div>
+                <h4>Nueva venta</h4>
+                <p>Registra operaciones con productos del catálogo.</p>
+            </a>
+
+        </div>
+    </section>
+
+    <section class="business-grid">
+
+        <div class="business-card">
+            <h3>Una zapatería para cada paso</h3>
+            <p>
+                Paso Firme ofrece calzado para clientes que buscan estilo,
+                comodidad y durabilidad. Nuestro catálogo reúne opciones para
+                uso casual, formal y diario, pensando en quienes desean verse
+                bien sin sacrificar confort.
+            </p>
+
+            <span class="business-highlight">
+                Estilo y comodidad en un solo lugar
+            </span>
+        </div>
+
+        <div class="business-card dark">
+            <h3>Atención enfocada en el cliente</h3>
+            <p>
+                Cada venta se gestiona de forma ordenada para brindar una
+                experiencia rápida y confiable. El sistema permite dar seguimiento
+                a clientes, productos y operaciones, fortaleciendo la atención
+                personalizada de la zapatería.
+            </p>
+        </div>
+
+    </section>
+}
+
+@code {
+    private int totalClientes;
+    private int totalVentas;
+    private int totalProductos;
+    private decimal ingresosTotales;
+    private bool cargando = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        totalClientes = await Db.Clientes.CountAsync();
+        totalVentas = await Db.Ventas.CountAsync();
+
+        ingresosTotales = await Db.Ventas.AnyAsync()
+            ? await Db.Ventas.SumAsync(v => v.Total)
+            : 0;
+
+        var productos = await ProductoServicio.ObtenerProductos();
+        totalProductos = productos.Count;
+
+        cargando = false;
+    }
+}
