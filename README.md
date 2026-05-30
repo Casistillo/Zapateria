@@ -44,3 +44,9 @@ Endpoints utilizados:
 ### 4. Ventas
 <img width="1919" height="999" alt="ventas" src="https://github.com/user-attachments/assets/ac1fd201-b887-46af-bf1e-6e84969c8104" />
 
+
+
+
+Declaratoria de IA
+
+https://chatgpt.com/c/6a0cc2e0-f1c4-83e8-82f0-99fdd9820076
