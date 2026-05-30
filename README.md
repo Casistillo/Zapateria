@@ -47,6 +47,25 @@ Endpoints utilizados:
 
 
 
+
+
 Declaratoria de IA
+
+Para el desarrollo de este proyecto se utilizó ChatGPT (OpenAI) como herramienta de apoyo académico y consulta técnica.
+
+La herramienta fue utilizada para:
+
+-Comprender los conceptos de arquitectura web moderna.
+-Entender el funcionamiento de APIs REST, HTTP, JSON y Swagger.
+-Reforzar conceptos de Programación Orientada a Objetos (POO) aplicados a C#.
+-Comprender el funcionamiento de Blazor, Entity Framework Core y Azure SQL.
+-Analizar la estructura de los datos proporcionados por la API del profesor.
+-Diseñar la arquitectura inicial del sistema de zapatería.
+-Obtener orientación sobre la organización de carpetas, modelos, servicios y componentes dentro del proyecto.
+-Resolver dudas técnicas relacionadas con el consumo de APIs mediante HttpClient y GetFromJsonAsync.
+-Comprender el flujo de datos entre frontend, backend, API y base de datos.
+
+
+Enlace de la conversación utilizada como apoyo:
 
 https://chatgpt.com/c/6a0cc2e0-f1c4-83e8-82f0-99fdd9820076
